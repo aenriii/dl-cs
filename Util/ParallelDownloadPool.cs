@@ -12,15 +12,12 @@ namespace dl_cs.Util
     public class ParallelDownloadPool : IDisposable
     {
         private List<DL> Pool;
-        private int index;
         static HttpClient client = new();
         private static Task Holding = new TaskCompletionSource<object>().Task;
         private List<Tuple<string, string>> Queue = new();
         public ParallelDownloadPool(int MaxParallelism)
         {
             Pool = new();
-            
-            index = 0;
         }
 
         public void AddToQueue(string uri, string filePath)
@@ -49,7 +46,7 @@ namespace dl_cs.Util
                 FilePath = filePath;
                 // ignorable task to make compiler happy
                 DoneMarker = Holding;
-                Console.Write("\rDownloading: " + uri);
+                Console.Write("\b".Times(70) + "\rDownloading: " + uri);
                 doDl();
             }
 
@@ -66,7 +63,7 @@ namespace dl_cs.Util
                         }
                     }
                     DoneMarker = Task.CompletedTask;
-                    Console.Write("\rDownloaded: " + FilePath);
+                    Console.Write("\b".Times(70) + "\rDownloaded: " + FilePath);
                 });
                 
             }
@@ -84,6 +81,7 @@ namespace dl_cs.Util
                     Pool.RemoveAll(x => x.DoneMarker.IsCompleted);
                 }
                 // add new dl to pool from top of queue, and remove from queue
+                if (Queue.Count == 0) break;
                 Pool.Add(new DL(Queue[0].Item1, Queue[0].Item2));
                 Queue.RemoveAt(0);
 
