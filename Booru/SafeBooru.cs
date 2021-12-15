@@ -12,9 +12,9 @@ namespace dl_cs.Booru
 {
     public class SafeBooru : IDisposable
     {
-        private HttpClient Client;
-        private XmlReader Reader;
-        private ParallelDownloadPool Pool;
+        private HttpClient Client = new();
+        private XmlReader Reader = XmlReader.Create(new MemoryStream(new byte[]{0}));
+        private ParallelDownloadPool Pool = new(8);
         static XmlReaderSettings _readerSettings= new XmlReaderSettings()
         {
           
@@ -22,7 +22,23 @@ namespace dl_cs.Booru
         };
         public SafeBooru(string[] args, int count, string out_dir, string alternateBaseUrl = "")
         {
-            
+            if (count > 1000)
+            {
+                for (int i = count; i > 0; i-=0)
+                {
+                    if (i > 1000)
+                    {
+                        new SafeBooru(args, 1000, out_dir, alternateBaseUrl).Dispose();
+                        i -= 1000;
+                    }
+                    else
+                    {
+                        new SafeBooru(args, i, out_dir, alternateBaseUrl).Dispose();
+                        i -= i;
+                    }
+                }
+                return;
+            }
             Client = new();
             Pool = new(8);
             if (alternateBaseUrl == "")
@@ -60,9 +76,9 @@ namespace dl_cs.Booru
             ReleaseUnmanagedResources();
             if (disposing)
             {
-                Client.Dispose();
-                Reader.Dispose();
-                Pool.Dispose();
+                Client?.Dispose();
+                Reader?.Dispose();
+                Pool?.Dispose();
             }
         }
 
