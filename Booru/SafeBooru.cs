@@ -22,22 +22,24 @@ namespace dl_cs.Booru
         };
         public SafeBooru(string[] args, int count, string out_dir, string alternateBaseUrl = "")
         {
-            if (count > 1000)
-            {
-                for (int i = count; i > 0; i-=0)
-                {
-                    if (i > 1000)
+            if(count > 1000) {
+                byte[] holding = new byte[(count/1000)+1];
+                Array.Fill<byte>(holding, 0);
+                Parallel.ForEach(holding, h => {
+                    int cnt = 0;
+                    if (count > 1000)
                     {
-                        new SafeBooru(args, 1000, out_dir, alternateBaseUrl).Dispose();
-                        i -= 1000;
+                        cnt = 1000;
+                        count -= 1000;
                     }
                     else
                     {
-                        new SafeBooru(args, i, out_dir, alternateBaseUrl).Dispose();
-                        i -= i;
+                        cnt = count;
+                        count = 0;
                     }
-                }
-                return;
+                    if (cnt == 0) return;
+                    new SafeBooru(args, cnt, out_dir, alternateBaseUrl).Dispose();
+                });
             }
             Client = new();
             Pool = new(8);
