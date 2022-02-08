@@ -6,6 +6,8 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Xml;
+using System.Diagnostics;
+
 using dl_cs.Util;
 
 namespace dl_cs.Booru
@@ -18,49 +20,36 @@ namespace dl_cs.Booru
         static XmlReaderSettings _readerSettings= new XmlReaderSettings()
         {
           
-            DtdProcessing = DtdProcessing.Parse
+            DtdProcessing = DtdProcessing.Parse,
+            Async = true
         };
-        public SafeBooru(string[] args, int count, string out_dir, string alternateBaseUrl = "")
+        public SafeBooru(string[] args, int count, string out_dir, string alternateBaseUrl = "", Stopwatch timer = null)
         {
-            if(count > 1000) {
-                byte[] holding = new byte[(count/1000)+1];
-                Array.Fill<byte>(holding, 0);
-                Parallel.ForEach(holding, h => {
-                    int cnt = 0;
-                    if (count > 1000)
-                    {
-                        cnt = 1000;
-                        count -= 1000;
-                    }
-                    else
-                    {
-                        cnt = count;
-                        count = 0;
-                    }
-                    if (cnt == 0) return;
-                    new SafeBooru(args, cnt, out_dir, alternateBaseUrl).Dispose();
-                });
-            }
+            if (timer != null) timer.Start();
             Client = new();
-            Pool = new(8);
+            Pool = new(8, timer);
             if (alternateBaseUrl == "")
             {
                 alternateBaseUrl = "https://safebooru.org/";
             }
+            
+
             var lst = new SBC(this, alternateBaseUrl).GetPosts(String.Join("+", args), count);
             Parallel.ForEach( lst, post =>
                 {
-                    // Console.WriteLine($"\rDownloading {post.Split("/")[post.Split("/").Length - 1]}");
+                    // Console.WriteLine($"\rDownloading {post .Split("/")[post.Split("/").Length - 1]}");
                     string fileUrl = post;
-                    string filePath = Path.Combine(out_dir, Path.GetFileName(fileUrl));
+                    // Console.WriteLine(post);
+                    try {string filePath = Path.Combine(out_dir, Path.GetFileName(fileUrl));
                     if (File.Exists(filePath))
                         return;
-                    Pool.AddToQueue(fileUrl, filePath);
+                    Pool.AddToQueue(fileUrl, filePath);}
+                    catch {}
                 }
             );
             
             Pool.WaitToFinish().GetAwaiter().GetResult();
-
+            if (timer != null) timer.Stop();
         }
 
         ~SafeBooru()
@@ -106,8 +95,16 @@ namespace dl_cs.Booru
                 var url = $"{base_url}index.php?page=dapi&s=post&q=index&tags={tags}&limit={count}";
                 var response = parent.Client.GetAsync(url).Result;
                 var stream = response.Content.ReadAsStreamAsync().Result;
-                parent.Reader = XmlReader.Create(stream, _readerSettings);
-                return parent.Reader.GetAttrsOfTypeNode("post", "file_url");
+
+                parent.Reader = XmlReader.Create(stream.Duplicate(), _readerSettings);
+                var nodeTypeAttrs = parent.Reader.GetAttrsOfTypeNode("post", "file_url");
+
+                if (nodeTypeAttrs.FindAll(x => x != null).Count() == 0)
+                {
+                    parent.Reader = XmlReader.Create(stream.Duplicate(), _readerSettings);
+                    nodeTypeAttrs = parent.Reader.GetValAllNodeType("file_url");
+                }
+                return nodeTypeAttrs;
             }
         }
     }

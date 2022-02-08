@@ -4,8 +4,8 @@ using dl_cs.Booru;
 using System.IO;
 using System.Threading.Tasks;
 using System.Linq;
-string[] tags = new[] {"slime_girl"};
-int count = 4767;
+string[] tags = new[] {"tail", "rating:safe"};
+int count = 300;
 string out_dir = "./out";
 // string alternateBaseUrl = "";
 string alternateBaseUrl = "https://gelbooru.com/";
@@ -17,11 +17,10 @@ if (Directory.Exists(out_dir))
     count_files_old = Directory.GetFiles(out_dir).Length;
 }
 
-s.Start();
-new SafeBooru(tags,count,out_dir,alternateBaseUrl).Dispose();
-s.Stop();
+new SafeBooru(tags,count,out_dir,alternateBaseUrl, s).Dispose();
+
 Console.WriteLine("");
-Console.WriteLine("Getting benckmarking results...");
+Console.WriteLine("Getting benchmarking results...");
 Task.Delay(2000).GetAwaiter().GetResult();
 int count_files_new = Directory.GetFiles(out_dir).Length - count_files_old;
 DirectoryInfo di = new DirectoryInfo(out_dir);

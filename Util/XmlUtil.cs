@@ -17,5 +17,26 @@ namespace dl_cs.Util
             }
             return list;
         }
+        public static List<string> GetValAllNodeType(this XmlReader reader, string nodeType)
+        {
+            var list = new List<string>();
+            while (reader.Read())
+            {
+                if (reader.NodeType == XmlNodeType.Element && reader.Name == nodeType)
+                {
+                    list.Add(reader.ReadElementContentAsString());
+                }
+            }
+            return list;
+        }
+        public static Stream Duplicate(this Stream stream)
+        {
+            long pos = stream.Position;
+            MemoryStream stream2 = new();
+            stream.CopyTo(stream2);
+            if (stream.CanSeek) stream.Seek(pos, SeekOrigin.Begin);
+            stream2.Seek(0, SeekOrigin.Begin);
+            return stream2;
+        }
     }
 }
